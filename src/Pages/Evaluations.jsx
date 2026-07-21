@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 function Evaluations({ students, onSaveEvaluation }) {
   const [selectedStudent, setSelectedStudent] = useState(students[0]?.name || "");
@@ -10,6 +10,13 @@ function Evaluations({ students, onSaveEvaluation }) {
     speechStructure: 5,
   });
 
+  // Keep dropdown selection synced when students are added or deleted
+  useEffect(() => {
+    if (students.length > 0 && !students.some((s) => s.name === selectedStudent)) {
+      setSelectedStudent(students[0].name);
+    }
+  }, [students, selectedStudent]);
+
   const totalScore = Object.values(scores).reduce((sum, val) => sum + Number(val), 0);
 
   const handleScoreChange = (criterion, value) => {
@@ -18,8 +25,22 @@ function Evaluations({ students, onSaveEvaluation }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!selectedStudent) return;
     onSaveEvaluation(selectedStudent, totalScore);
   };
+
+  if (students.length === 0) {
+    return (
+      <div style={styles.container}>
+        <h2>📋 Weekly Speech Evaluation</h2>
+        <div style={styles.card}>
+          <p style={{ color: "#9ca3af", textAlign: "center", margin: 0 }}>
+            ⚠️ No students found. Please add members in the <strong>Students</strong> tab first before evaluating!
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
@@ -35,7 +56,7 @@ function Evaluations({ students, onSaveEvaluation }) {
         >
           {students.map((student) => (
             <option key={student.id} value={student.name}>
-              {student.name}
+              {student.name} ({student.grade})
             </option>
           ))}
         </select>

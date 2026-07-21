@@ -8,14 +8,26 @@ function App() {
   const [activeTab, setActiveTab] = useState("students");
 
   // Centralized Student Data State
-  const [students, setStudents] = useState([
-    { id: 1, name: "Alex Morgan", path: "Dynamic Leadership", speechesGiven: 5, score: 0 },
-    { id: 2, name: "Samira Khan", path: "Presentation Mastery", speechesGiven: 8, score: 0 },
-    { id: 3, name: "Jordan Lee", path: "Effective Body Language", speechesGiven: 3, score: 0 },
-    { id: 4, name: "Taylor Swift", path: "Persuasive Speaking", speechesGiven: 6, score: 0 },
-  ]);
+  const [students, setStudents] = useState([]);
 
-  // Handler to update evaluation score
+  // Handler to add a new student
+  const handleAddStudent = (newStudentData) => {
+    const newStudent = {
+      id: Date.now(),
+      name: newStudentData.name,
+      grade: newStudentData.grade,
+      speechesGiven: 0,
+      score: 0,
+    };
+    setStudents((prev) => [...prev, newStudent]);
+  };
+
+  // Handler to delete a student
+  const handleDeleteStudent = (studentId) => {
+    setStudents((prev) => prev.filter((student) => student.id !== studentId));
+  };
+
+  // Handler to update evaluation score & auto-count speeches
   const handleSaveEvaluation = (studentName, totalScore) => {
     setStudents((prevStudents) =>
       prevStudents.map((student) => {
@@ -29,8 +41,7 @@ function App() {
         return student;
       })
     );
-    // Switch over to Winners tab automatically to show updated podium
-    setActiveTab("winners");
+    // Automatic redirect removed as requested!
   };
 
   return (
@@ -38,7 +49,13 @@ function App() {
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 
       <main>
-        {activeTab === "students" && <Students students={students} />}
+        {activeTab === "students" && (
+          <Students 
+            students={students} 
+            onAddStudent={handleAddStudent} 
+            onDeleteStudent={handleDeleteStudent}
+          />
+        )}
         {activeTab === "evaluations" && (
           <Evaluations students={students} onSaveEvaluation={handleSaveEvaluation} />
         )}
