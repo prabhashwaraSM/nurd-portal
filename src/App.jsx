@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import Navbar from "./components/Navbar";
-import Students from "./pages/Students";
-import Evaluations from "./pages/Evaluations";
-import Winners from "./pages/Winners";
+import Students from "./Pages/Students";
+import Evaluations from "./Pages/Evaluations";
+import Winners from "./Pages/Winners";
 
 // Import Firestore database instance & helper functions
 import { db } from "./firebase";
