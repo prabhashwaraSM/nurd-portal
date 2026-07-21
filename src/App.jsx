@@ -1,18 +1,21 @@
-// 1. Import your new Navbar component
+import { useState } from "react";
 import Navbar from "./components/Navbar";
+import Students from "./pages/Students";
+import Evaluations from "./pages/Evaluations";
+import Winners from "./pages/Winners";
 
 function App() {
-  const projectName = "Nurd Portal";
+  const [activeTab, setActiveTab] = useState("students");
 
   return (
-    <div>
-      {/* 2. Use the Navbar component like a custom HTML tag */}
-      <Navbar />
+    <div style={{ backgroundColor: "#111827", minHeight: "100vh", fontFamily: "sans-serif" }}>
+      <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <div style={{ padding: "20px" }}>
-        <h1>Welcome to {projectName}!</h1>
-        <p>Our layout is officially starting to come together.</p>
-      </div>
+      <main>
+        {activeTab === "students" && <Students />}
+        {activeTab === "evaluations" && <Evaluations />}
+        {activeTab === "winners" && <Winners />}
+      </main>
     </div>
   );
 }
