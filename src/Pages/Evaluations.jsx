@@ -1,219 +1,377 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-function Evaluations({ students, onSaveEvaluation }) {
-  const [selectedStudent, setSelectedStudent] = useState(students[0]?.name || "");
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [submittedData, setSubmittedData] = useState({ name: "", score: 0 });
+const SEGMENTS = [
+  { key: "content", label: "Content & Preparation" },
+  { key: "delivery", label: "Voice & Delivery" },
+  { key: "bodyLanguage", label: "Body Language & Eye Contact" },
+  { key: "structure", label: "Structure & Grammar" }
+];
 
-  const [scores, setScores] = useState({
-    gestures: 5,
-    smile: 5,
-    eyeContact: 5,
-    vocalVariety: 5,
-    speechStructure: 5,
+export default function Evaluations({ students, evaluations, onSaveEvaluation, onDeleteWeek }) {
+  const [selectedWeek, setSelectedWeek] = useState(null); // null = show weeks list view
+  const [showModal, setShowModal] = useState(false);
+  const [weekToDelete, setWeekToDelete] = useState(null);
+
+  // Form State
+  const [weekNumberInput, setWeekNumberInput] = useState("1");
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [marks, setMarks] = useState({
+    content: 0,
+    delivery: 0,
+    bodyLanguage: 0,
+    structure: 0,
   });
 
-  useEffect(() => {
-    if (students.length > 0 && !students.some((s) => s.name === selectedStudent)) {
-      setSelectedStudent(students[0].name);
+  // Extract list of unique weeks dynamically
+  const existingWeeks = Array.from(
+    new Set(evaluations.map((e) => e.week).filter(Boolean))
+  ).sort();
+
+  const totalScore = Object.values(marks).reduce((acc, curr) => acc + Number(curr), 0);
+
+  const handleOpenModal = () => {
+    if (selectedWeek) {
+      const match = selectedWeek.match(/\d+/);
+      setWeekNumberInput(match ? match[0] : "1");
+    } else {
+      const nextNum = existingWeeks.length + 1;
+      setWeekNumberInput(String(nextNum));
     }
-  }, [students, selectedStudent]);
+    setSelectedStudentId(students[0]?.id || "");
+    setMarks({ content: 0, delivery: 0, bodyLanguage: 0, structure: 0 });
+    setShowModal(true);
+  };
 
-  const totalScore = Object.values(scores).reduce((sum, val) => sum + Number(val), 0);
-
-  const handleScoreChange = (criterion, value) => {
-    setScores((prev) => ({ ...prev, [criterion]: value }));
+  const handleMarkChange = (segmentKey, val) => {
+    const num = Math.min(10, Math.max(0, Number(val)));
+    setMarks((prev) => ({ ...prev, [segmentKey]: num }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedStudent) return;
-    
-    // Save state upward
-    onSaveEvaluation(selectedStudent, totalScore);
+    if (!weekNumberInput) {
+      alert("Please enter a week number!");
+      return;
+    }
+    if (!selectedStudentId) {
+      alert("Please select a student!");
+      return;
+    }
 
-    // Trigger submission effect
-    setSubmittedData({ name: selectedStudent, score: totalScore });
-    setShowCelebration(true);
+    const formattedWeekName = `Week ${weekNumberInput}`;
+    const studentObj = students.find((s) => s.id === selectedStudentId);
 
-    // Automatically dismiss celebration overlay after 2.5 seconds
-    setTimeout(() => {
-      setShowCelebration(false);
-    }, 2500);
+    onSaveEvaluation({
+      week: formattedWeekName,
+      studentId: selectedStudentId,
+      studentName: studentObj ? studentObj.name : "Unknown",
+      studentGrade: studentObj ? studentObj.grade : "",
+      marks,
+      totalScore,
+    });
+
+    setSelectedWeek(formattedWeekName);
+    setShowModal(false);
   };
 
-  if (students.length === 0) {
-    return (
-      <div style={styles.container}>
-        <h2>📋 Weekly Speech Evaluation</h2>
-        <div style={styles.card}>
-          <p style={{ color: "#9ca3af", textAlign: "center", margin: 0 }}>
-            ⚠️ No students found. Please add members in the <strong>Students</strong> tab first before evaluating!
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const confirmDeleteWeek = () => {
+    if (weekToDelete) {
+      onDeleteWeek(weekToDelete);
+      if (selectedWeek === weekToDelete) {
+        setSelectedWeek(null);
+      }
+      setWeekToDelete(null);
+    }
+  };
+
+  const activeWeekEvaluations = evaluations.filter((e) => e.week === selectedWeek);
 
   return (
-    <div style={styles.container}>
-      {/* Dynamic Keyframe Animations CSS */}
-      <style>{`
-        @keyframes popIn {
-          0% { transform: scale(0.5); opacity: 0; }
-          70% { transform: scale(1.05); opacity: 1; }
-          100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes floatUp {
-          0% { transform: translateY(0px); opacity: 1; }
-          50% { transform: translateY(-15px); }
-          100% { transform: translateY(0px); opacity: 1; }
-        }
-      `}</style>
-
-      <h2>📋 Weekly Speech Evaluation</h2>
-      <p style={{ color: "#9ca3af" }}>Grade speaker performance across key communication metrics (1-10).</p>
-
-      {/* Submission Celebration Modal Overlay */}
-      {showCelebration && (
-        <div style={styles.overlay}>
-          <div style={styles.modal}>
-            <div style={styles.floatingIcons}>🎉 ✨ 🌟</div>
-            <h2 style={styles.modalTitle}>Evaluation Submitted!</h2>
-            <div style={styles.scoreBadge}>
-              <p style={{ margin: "0 0 5px 0", color: "#93c5fd", fontSize: "0.95rem" }}>
-                Speaker: <strong>{submittedData.name}</strong>
-              </p>
-              <h1 style={{ margin: 0, color: "#4ade80", fontSize: "2.5rem" }}>
-                {submittedData.score} <span style={{ fontSize: "1.2rem", color: "#9ca3af" }}>/ 50</span>
-              </h1>
-            </div>
-            <p style={{ color: "#d1d5db", margin: "15px 0 0 0", fontSize: "0.9rem" }}>
-              Score & Speech count saved automatically!
-            </p>
-            <button 
-              onClick={() => setShowCelebration(false)} 
-              style={styles.closeBtn}
+    <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+      {/* Top Bar Header */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "15px", marginBottom: "25px" }}>
+        <div>
+          {selectedWeek && (
+            <button
+              onClick={() => setSelectedWeek(null)}
+              style={{ backgroundColor: "transparent", color: "#60a5fa", border: "none", cursor: "pointer", padding: 0, marginBottom: "8px", fontSize: "14px", fontWeight: "bold", display: "flex", alignItems: "center", gap: "5px" }}
             >
-              Continue Evaluating
+              ← Back to All Weeks
             </button>
+          )}
+          <h1 style={{ fontSize: "28px", fontWeight: "bold", margin: "0 0 5px 0" }}>
+            {selectedWeek ? `${selectedWeek} Evaluations` : "Weekly Evaluations"}
+          </h1>
+          <p style={{ color: "#9ca3af", margin: 0 }}>
+            {selectedWeek ? "Review student scores and statuses for this week." : "Select a week to view student records or add a new evaluation."}
+          </p>
+        </div>
+
+        <button
+          onClick={handleOpenModal}
+          style={{ backgroundColor: "#2563eb", color: "white", padding: "10px 20px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "bold", fontSize: "15px" }}
+        >
+          + New Evaluation
+        </button>
+      </div>
+
+      {/* VIEW 1: HORIZONTAL WEEKS LIST */}
+      {!selectedWeek && (
+        <div>
+          {existingWeeks.length === 0 ? (
+            <div style={{ backgroundColor: "#1f2937", borderRadius: "12px", border: "1px solid #374151", padding: "50px 20px", textAlign: "center" }}>
+              <h3 style={{ margin: "0 0 10px 0", color: "#f3f4f6" }}>No Evaluation Weeks Available</h3>
+              <p style={{ color: "#9ca3af", margin: "0 0 20px 0" }}>Click below to create your first evaluation session.</p>
+              <button
+                onClick={handleOpenModal}
+                style={{ backgroundColor: "#2563eb", color: "white", padding: "10px 20px", borderRadius: "8px", border: "none", cursor: "pointer", fontWeight: "bold" }}
+              >
+                + Start First Evaluation
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {existingWeeks.map((week) => {
+                const count = evaluations.filter((e) => e.week === week).length;
+                return (
+                  <div
+                    key={week}
+                    onClick={() => setSelectedWeek(week)}
+                    style={{
+                      backgroundColor: "#1f2937",
+                      border: "1px solid #374151",
+                      borderRadius: "10px",
+                      padding: "16px 20px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      cursor: "pointer",
+                      transition: "all 0.2s"
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#3b82f6")}
+                    onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#374151")}
+                  >
+                    <div>
+                      <h3 style={{ margin: "0 0 4px 0", fontSize: "18px", color: "#f9fafb" }}>{week}</h3>
+                      <span style={{ fontSize: "13px", color: "#9ca3af" }}>
+                        {count} {count === 1 ? "student evaluated" : "students evaluated"}
+                      </span>
+                    </div>
+
+                    {/* Delete Week Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // Don't trigger card click
+                        setWeekToDelete(week);
+                      }}
+                      title="Delete Week"
+                      style={{
+                        backgroundColor: "#ef44441a",
+                        color: "#ef4444",
+                        border: "1px solid #ef4444",
+                        borderRadius: "6px",
+                        width: "36px",
+                        height: "36px",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        cursor: "pointer",
+                      }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW 2: SELECTED WEEK STUDENT TABLE */}
+      {selectedWeek && (
+        <div style={{ backgroundColor: "#1f2937", borderRadius: "12px", border: "1px solid #374151", overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#111827", borderBottom: "1px solid #374151", color: "#9ca3af", fontSize: "14px" }}>
+                <th style={{ padding: "14px 20px" }}>Student Name</th>
+                <th style={{ padding: "14px 20px" }}>Grade</th>
+                <th style={{ padding: "14px 20px" }}>Segment Breakdown</th>
+                <th style={{ padding: "14px 20px" }}>Total Marks</th>
+                <th style={{ padding: "14px 20px" }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {students.length === 0 ? (
+                <tr>
+                  <td colSpan="5" style={{ padding: "30px", textAlign: "center", color: "#6b7280" }}>
+                    No students found. Add students in the Students tab first.
+                  </td>
+                </tr>
+              ) : (
+                students.map((student) => {
+                  const evalData = activeWeekEvaluations.find((e) => e.studentId === student.id);
+                  const isAbsent = !evalData;
+
+                  return (
+                    <tr key={student.id} style={{ borderBottom: "1px solid #374151" }}>
+                      <td style={{ padding: "16px 20px", fontWeight: "600" }}>{student.name}</td>
+                      <td style={{ padding: "16px 20px", color: "#9ca3af" }}>{student.grade}</td>
+
+                      {/* Segment Breakdown */}
+                      <td style={{ padding: "16px 20px" }}>
+                        {!isAbsent ? (
+                          <div style={{ fontSize: "13px", color: "#d1d5db" }}>
+                            Content: <b>{evalData.marks?.content ?? 0}</b> | Delivery: <b>{evalData.marks?.delivery ?? 0}</b> | Body: <b>{evalData.marks?.bodyLanguage ?? 0}</b> | Structure: <b>{evalData.marks?.structure ?? 0}</b>
+                          </div>
+                        ) : (
+                          <span style={{ color: "#6b7280" }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Total Score */}
+                      <td style={{ padding: "16px 20px", fontWeight: "bold", fontSize: "16px" }}>
+                        {!isAbsent ? `${evalData.totalScore} / 40` : "—"}
+                      </td>
+
+                      {/* Status Badge */}
+                      <td style={{ padding: "16px 20px" }}>
+                        {!isAbsent ? (
+                          <span style={{ backgroundColor: "#065f46", color: "#34d399", padding: "4px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: "bold" }}>
+                            Evaluated
+                          </span>
+                        ) : (
+                          <span style={{ backgroundColor: "#7f1d1d", color: "#fca5a5", padding: "4px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: "bold" }}>
+                            Absent
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* MODAL 1: NEW EVALUATION FORM */}
+      {showModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.75)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
+          <div style={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "12px", width: "90%", maxWidth: "500px", padding: "25px", color: "white" }}>
+            <h2 style={{ marginTop: 0, fontSize: "22px" }}>New Evaluation</h2>
+
+            <form onSubmit={handleSubmit}>
+              {/* Number-Only Week Input */}
+              <div style={{ marginBottom: "18px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#d1d5db" }}>
+                  Week Number:
+                </label>
+                <div style={{ display: "flex", alignItems: "center", border: "1px solid #374151", borderRadius: "6px", backgroundColor: "#111827", overflow: "hidden" }}>
+                  <span style={{ padding: "10px 14px", backgroundColor: "#374151", color: "#9ca3af", fontWeight: "bold", fontSize: "14px" }}>
+                    Week
+                  </span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={weekNumberInput}
+                    onChange={(e) => setWeekNumberInput(e.target.value)}
+                    placeholder="1"
+                    style={{ flex: 1, padding: "10px", backgroundColor: "transparent", color: "white", border: "none", outline: "none", fontSize: "15px", fontWeight: "bold" }}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Student Select Dropdown */}
+              <div style={{ marginBottom: "18px" }}>
+                <label style={{ display: "block", marginBottom: "8px", fontSize: "14px", color: "#d1d5db" }}>Select Student:</label>
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", backgroundColor: "#111827", color: "white", border: "1px solid #374151", boxSizing: "border-box" }}
+                  required
+                >
+                  <option value="" disabled>Choose a student...</option>
+                  {students.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.grade})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Segment Marks (0-10) */}
+              <div style={{ marginBottom: "20px" }}>
+                <label style={{ display: "block", marginBottom: "12px", fontSize: "14px", fontWeight: "bold", color: "#60a5fa" }}>
+                  Allocate Segment Marks (0 - 10):
+                </label>
+
+                {SEGMENTS.map((seg) => (
+                  <div key={seg.key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                    <span style={{ fontSize: "14px" }}>{seg.label}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={marks[seg.key]}
+                      onChange={(e) => handleMarkChange(seg.key, e.target.value)}
+                      style={{ width: "65px", padding: "6px", borderRadius: "6px", backgroundColor: "#111827", color: "white", border: "1px solid #374151", textAlign: "center", fontWeight: "bold" }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Total Score Summary */}
+              <div style={{ backgroundColor: "#111827", padding: "12px 15px", borderRadius: "8px", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+                <span>Total Calculated Score:</span>
+                <span style={{ fontSize: "20px", fontWeight: "bold", color: "#34d399" }}>{totalScore} / 40</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  style={{ padding: "10px 16px", borderRadius: "6px", backgroundColor: "#374151", color: "white", border: "none", cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  style={{ padding: "10px 20px", borderRadius: "6px", backgroundColor: "#2563eb", color: "white", border: "none", cursor: "pointer", fontWeight: "bold" }}
+                >
+                  Save Evaluation
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={styles.card}>
-        <label style={{ color: "#f9fafb" }}><strong>Select Student:</strong></label>
-        <select 
-          value={selectedStudent} 
-          onChange={(e) => setSelectedStudent(e.target.value)}
-          style={styles.select}
-        >
-          {students.map((student) => (
-            <option key={student.id} value={student.name}>
-              {student.name} ({student.grade})
-            </option>
-          ))}
-        </select>
-
-        <div style={styles.criteriaContainer}>
-          {[
-            { key: "gestures", label: "🤝 Natural Hand Gestures" },
-            { key: "smile", label: "😊 Confident Smile & Warmth" },
-            { key: "eyeContact", label: "👁️ Audience Eye Contact" },
-            { key: "vocalVariety", label: "🎙️ Vocal Variety & Projection" },
-            { key: "speechStructure", label: "📝 Speech Structure & Flow" },
-          ].map((item) => (
-            <div key={item.key} style={styles.scoreRow}>
-              <span style={{ color: "#d1d5db" }}>{item.label}: <strong style={{ color: "#60a5fa" }}>{scores[item.key]}/10</strong></span>
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={scores[item.key]}
-                onChange={(e) => handleScoreChange(item.key, e.target.value)}
-              />
+      {/* MODAL 2: DELETE CONFIRMATION */}
+      {weekToDelete && (
+        <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.75)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1100 }}>
+          <div style={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "12px", width: "90%", maxWidth: "420px", padding: "25px", color: "white", textAlign: "center" }}>
+            <h3 style={{ marginTop: 0, fontSize: "20px", color: "#ef4444" }}>Delete {weekToDelete}?</h3>
+            <p style={{ color: "#d1d5db", fontSize: "14px", marginBottom: "25px" }}>
+              Are you sure you want to delete <b>{weekToDelete}</b> and all evaluation records inside it? This action cannot be undone.
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+              <button
+                onClick={() => setWeekToDelete(null)}
+                style={{ padding: "10px 20px", borderRadius: "6px", backgroundColor: "#374151", color: "white", border: "none", cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteWeek}
+                style={{ padding: "10px 20px", borderRadius: "6px", backgroundColor: "#dc2626", color: "white", border: "none", cursor: "pointer", fontWeight: "bold" }}
+              >
+                Delete Week
+              </button>
             </div>
-          ))}
+          </div>
         </div>
-
-        <div style={styles.totalBox}>
-          <h3 style={{ color: "#f9fafb" }}>Total Score: {totalScore} / 50</h3>
-          <button type="submit" style={styles.submitBtn}>
-            🚀 Submit Evaluation
-          </button>
-        </div>
-      </form>
+      )}
     </div>
   );
 }
-
-const styles = {
-  container: { padding: "30px", maxWidth: "700px", margin: "0 auto", position: "relative" },
-  card: { 
-    backgroundColor: "#1f2937", 
-    color: "#f9fafb",
-    padding: "25px", 
-    borderRadius: "10px", 
-    boxShadow: "0 4px 12px rgba(0,0,0,0.4)", 
-    border: "1px solid #374151" 
-  },
-  select: { width: "100%", padding: "10px", marginTop: "8px", marginBottom: "20px", borderRadius: "5px", border: "1px solid #4b5563", backgroundColor: "#374151", color: "#fff" },
-  criteriaContainer: { display: "flex", flexDirection: "column", gap: "15px" },
-  scoreRow: { display: "flex", justifyContent: "space-between", alignItems: "center" },
-  totalBox: { marginTop: "25px", paddingTop: "15px", borderTop: "1px solid #374151", textAlign: "center" },
-  submitBtn: { backgroundColor: "#2563eb", color: "#fff", border: "none", padding: "12px 24px", borderRadius: "6px", cursor: "pointer", fontSize: "1.05rem", marginTop: "10px", fontWeight: "bold" },
-  
-  // Modal Overlay Styles
-  overlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100vw",
-    height: "100vh",
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
-    backdropFilter: "blur(4px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-  },
-  modal: {
-    backgroundColor: "#1f2937",
-    border: "2px solid #3b82f6",
-    borderRadius: "16px",
-    padding: "30px 40px",
-    textAlign: "center",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.8)",
-    animation: "popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
-    maxWidth: "400px",
-    width: "90%",
-  },
-  floatingIcons: {
-    fontSize: "2.2rem",
-    marginBottom: "10px",
-    animation: "floatUp 2s ease-in-out infinite",
-  },
-  modalTitle: {
-    margin: "0 0 15px 0",
-    color: "#f9fafb",
-    fontSize: "1.5rem"
-  },
-  scoreBadge: {
-    backgroundColor: "#111827",
-    padding: "15px",
-    borderRadius: "10px",
-    border: "1px solid #374151"
-  },
-  closeBtn: {
-    backgroundColor: "#3b82f6",
-    color: "#fff",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "6px",
-    fontWeight: "bold",
-    marginTop: "20px",
-    cursor: "pointer"
-  }
-};
-
-export default Evaluations;
