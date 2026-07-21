@@ -120,7 +120,7 @@ function App() {
             onDeleteWeek={handleDeleteWeek}
           />
         )}
-        {activeTab === "winners" && <Winners students={students} />}
+        {activeTab === "winners" && <Winners students={students} evaluations={evaluations} />}
       </main>
     </div>
   );
